@@ -62,12 +62,6 @@ top <- spiders %>%
 df <- spiders %>% 
     filter(family %in% top$family) %>% 
     mutate(family = factor(family, levels = top$family))
-   
-# Plot production
-df %>% 
-    count(family, species, year) %>% 
-    group_by(family) %>% 
-    slice_max(n)
 
 df1 <- df %>% 
     count(family, year, sort = TRUE) %>% 
@@ -77,8 +71,9 @@ df1 <- df %>%
            upper = M + SD) %>% 
     filter(n > SD) %>% 
     mutate(col = ifelse(n == max(n), "red", "black")) %>% 
-    ungroup() 
+    ungroup()    
 
+# Plot production
 df1 %>% 
     ggplot(aes(x = year, y = family, size = n)) +
     geom_point(alpha = .4) +
@@ -91,10 +86,7 @@ df1 %>%
                    slice_max(n) %>% 
                    mutate(col = "blue"),
                aes(x = year, y = family, color = col, size = n)) +
-    # geom_point(data = tibble(year = 2030, family = "Salticidae", col = NA, n = 500),
-    #            aes(x = year, y = family, color = col, size = n)) +
     scale_color_identity() +
-    # theme_void() +
     scale_x_continuous(expand = c(0.05, 0)) +
     scale_y_discrete(expand = c(0.1, .1)) +
     theme_void() +
