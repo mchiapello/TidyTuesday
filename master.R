@@ -10,7 +10,7 @@ if(!dir.exists(here::here(paste0("week", week)))){
 }
 
 # Load data
-tuesdata <- tidytuesdayR::tt_load('2021-12-07')
+tuesdata <- tidytuesdayR::tt_load(day)
 
 # Create backbone script
 if (!file.exists(paste0("week", week, "/", day, ".R"))){
