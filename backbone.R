@@ -61,7 +61,7 @@ names(tuesdata)
 
 # Generate camcorder gif
 gg_playback(
-    name = here(paste0("week", week, "/camcorder/final.gif")),
+    name = here(paste0("2021_week", week, "/camcorder/final.gif")),
     first_image_duration = 8,
     last_image_duration = 12,
     frame_duration = .25
