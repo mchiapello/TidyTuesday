@@ -18,7 +18,7 @@ library(patchwork)
 # library(ggridges)
 # library(ggfittext)
 # library(ggupset)
-# library(ggradar)
+library(ggradar)
 # library(ggworcloud)
 # library(ggcorrplot)
 # library(ggnetwork)
@@ -53,125 +53,65 @@ names(tuesdata)
 st <- tuesdata[[1]]
 
 # Data transformation
-st %>% count(caffeine_mg, size, sort = TRUE)
+fil <- st %>% 
+    select(product_name, size) %>% 
+    distinct() %>% 
+    count(product_name) %>% 
+    filter(n == 4)
 
-stt <- st %>% 
+st2 <- st %>% 
+    select(-milk, -whip, -sodium_mg, -serv_size_m_l) %>% 
     mutate(trans_fat_g = as.numeric(trans_fat_g),
            fiber_g = as.numeric(fiber_g)) %>% 
-    dplyr::select(product_name, size, calories, total_fat_g, cholesterol_mg,
-                  total_carbs_g:caffeine_mg) %>% 
+    filter(product_name %in% fil$product_name) %>% 
     group_by(product_name) %>% 
-    summarise(across(where(is.numeric), list(mean = mean, sd = sd))) %>% 
-    mutate(class = case_when(grepl("Tea", product_name,
-                                   ignore.case = TRUE) ~ "Tea",
-                             grepl("Caffè", product_name,
-                                   ignore.case = TRUE) ~ "Caffè",
-                             grepl("Frappuccino", product_name,
-                                   ignore.case = TRUE) ~ "Frappuccino",
-                             grepl("coffee", product_name, 
-                                   ignore.case = TRUE) ~ "Caffè",
-                             grepl("chocolate", product_name, 
-                                   ignore.case = TRUE) ~ "Chocolate",
-                             grepl("Espresso", product_name, 
-                                   ignore.case = TRUE) ~ "Espresso",
-                             grepl("Latte", product_name, 
-                                   ignore.case = TRUE) ~ "Latte",
-                             TRUE ~ "Other"),
-           class = fct_infreq(factor(class))) %>% 
-    relocate(class, .after = product_name) 
+    nest()
 
+x <- st2$data[[1]]
 
-plotgg <- function(x, tit = class){
-    x %>% 
-        ggplot(aes(product_name, total_fat_g_mean)) +
-            geom_errorbar(aes(ymin = total_fat_g_mean - total_fat_g_sd,
-                              ymax = total_fat_g_mean + total_fat_g_sd),
-                          size = 0.1, width = 0.25) +
-            geom_point(color = "#F5882F", size = 1) +
-        geom_errorbar(data = x,
-                      aes(ymin = calories_mean - calories_sd,
-                          ymax = calories_mean + calories_sd),
-                      size = 0.1, width = 0.25) +
-        geom_point(data = x,
-                   aes(product_name, calories_mean), 
-                   color = "blue", size = 1) +
-        geom_errorbar(data = x,
-                      aes(ymin = cholesterol_mg_mean - cholesterol_mg_sd,
-                          ymax = cholesterol_mg_mean + cholesterol_mg_sd),
-                      size = 0.1, width = 0.25) +
-        geom_point(data = x,
-                   aes(product_name, cholesterol_mg_mean), 
-                   color = "green", size = 1) +
-        geom_errorbar(data = x,
-                      aes(ymin = sugar_g_mean - sugar_g_sd,
-                          ymax = sugar_g_mean + sugar_g_sd),
-                      size = 0.1, width = 0.25) +
-        geom_point(data = x,
-                   aes(product_name, sugar_g_mean), 
-                   color = "brown", size = 1) +
-        geom_errorbar(data = x,
-                      aes(ymin = caffeine_mg_mean - caffeine_mg_sd,
-                          ymax = caffeine_mg_mean + caffeine_mg_sd),
-                      size = 0.1, width = 0.25) +
-        geom_point(data = x,
-                   aes(product_name, caffeine_mg_mean), 
-                   color = "purple", size = 1) +
-        labs(x = "",
-             y = "",
-             title = tit) +
-        theme_minimal() +
-        theme(panel.grid.major.x = element_blank(),
-              panel.grid.minor.x = element_blank(),
-              axis.text = element_text(family = "m300", size = 35),
-              title = element_text(family = "m600", size = 15,
-                                   hjust = .5)) +
-        scale_y_log10() +
-        coord_flip()
-}
+x2 <- x %>% 
+    mutate(across(where(is.numeric), ~ .x / sum(.x + 1))) %>% 
+    mutate(across(where(is.numeric), ~ replace_na(.x, 0)),
+           size = "marco") %>%
+    mutate(across(where(is.numeric), sum)) %>% 
+    distinct
 
+    
 
 # Plot production
-df <- stt %>% 
-    group_by(class) %>% 
-    nest() %>% 
-    mutate(N = map_int(data, nrow)) %>% 
-    arrange(desc(N)) %>% 
-    mutate(plot = map(data, ~plotgg(.x, tit = class)))
+x2 %>% 
+    ggradar(
+    font.radar = "m300",
+    grid.label.size = 0,  # Affects the grid annotations (0%, 50%, etc.)
+    axis.label.size = 2.5, # Afftects the names of the variables
+    group.point.size = 3   # Simply the size of the point 
+) 
+
+plotgg <- function(x){
+    x2 %>% 
+        pivot_longer(cols = -size,
+                     names_to = "feat",
+                     values_to = "value") %>% 
+        ggplot(aes(feat, value, fill = feat)) +
+        geom_col() +
+        coord_polar() +
+        theme_minimal() +
+        theme(panel.grid = element_blank(),
+              axis.text.y = element_blank(),
+              axis.title = element_blank(),
+              legend.position = "none")
+}
+x2 %>% 
+    pivot_longer(cols = -size,
+                 names_to = "feat",
+                 values_to = "value") %>% 
+    ggplot(aes(feat, value, group = size)) +
+    geom_jitter() +
+    geom_line() +
+    coord_polar()
 
 
 
-# stt %>% 
-#     ggplot(aes(product_name, total_fat_g_mean)) +
-#     geom_errorbar(aes(ymin = total_fat_g_mean - total_fat_g_sd,
-#                       ymax = total_fat_g_mean + total_fat_g_sd),
-#                   size = 0.1, width = 0.25) +
-#     geom_point(color = "red") +
-#     geom_errorbar(data = stt,
-#                   aes(ymin = calories_mean - calories_sd,
-#                       ymax = calories_mean + calories_sd),
-#                   size = 0.1, width = 0.25) +
-#     geom_point(data = stt,
-#                aes(product_name, calories_mean), color = "blue") +
-#     geom_errorbar(data = stt,
-#                   aes(ymin = cholesterol_mg_mean - cholesterol_mg_sd,
-#                       ymax = cholesterol_mg_mean + cholesterol_mg_sd),
-#                   size = 0.1, width = 0.25) +
-#     geom_point(data = stt,
-#                aes(product_name, cholesterol_mg_mean), color = "green") +
-#     geom_errorbar(data = stt,
-#                   aes(ymin = sugar_g_mean - sugar_g_sd,
-#                       ymax = sugar_g_mean + sugar_g_sd),
-#                   size = 0.1, width = 0.25) +
-#     geom_point(data = stt,
-#                aes(product_name, sugar_g_mean), color = "brown") +
-#     geom_errorbar(data = stt,
-#                   aes(ymin = caffeine_mg_mean - caffeine_mg_sd,
-#                       ymax = caffeine_mg_mean + caffeine_mg_sd),
-#                   size = 0.1, width = 0.25) +
-#     geom_point(data = stt,
-#                aes(product_name, caffeine_mg_mean), color = "purple") +
-#     coord_flip() +
-#     facet_wrap(vars(class))
 
 ggsave(paste0("2021_week", week, "/final.png"), units = "mm",
        width = 210, height = 297, dpi = 600) 
