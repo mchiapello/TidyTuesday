@@ -1,5 +1,5 @@
 # Which week do you want to analyze?
-day <- '2021-12-14'
+day <- '2021-12-21'
 year <- 2021
 week <- lubridate::week(lubridate::ymd(day))    
 
