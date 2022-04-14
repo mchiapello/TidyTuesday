@@ -1,6 +1,6 @@
 # Which week do you want to analyze?
-day <- '2021-12-21'
-year <- 2021
+day <- '2022-04-12'
+year <- 2022
 week <- lubridate::week(lubridate::ymd(day))    
 
 # Create the analysis folder
